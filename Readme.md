@@ -212,10 +212,10 @@ single train/test split.
 
 | Model | Test MAE | Test RMSE | Test R² | CV RMSE (mean) |
 |---|---|---|---|---|
-| Linear Regression | *fill in* | *fill in* | *fill in* | *fill in* |
-| Ridge Regression | *fill in* | *fill in* | *fill in* | *fill in* |
-| Decision Tree | *fill in* | *fill in* | *fill in* | *fill in* |
-| Random Forest | *fill in* | *fill in* | *fill in* | *fill in* |
+| Linear Regression | *6.87* | *9.53* | *0.9201* | *10.0734* |
+| Ridge Regression | *6.87* | *9.53* | *0.9201* | *10.0732* |
+| Decision Tree | *0.5314* | *1.409* | *0.9983* | *2.8074* |
+| Random Forest | *0.2725* | *0.8616* | *0.993* | *1.3393* |
 
 The notebook includes:
 
@@ -234,22 +234,25 @@ out overfitting.
 ## 📷 Screenshots
 
 ## Dataset Overview
-![Dataset Overview](screenshots/dataset_overview.png)
+![Dataset Overview](screenshots/DatasetOverview.png)
 
 ## Correlation Heatmap
-![Correlation Heatmap](screenshots/correlation_heatmap.png)
+![Correlation Heatmap](screenshots/corr.png)
 
 ## Box Plot — Outlier Detection
-![Box Plot](screenshots/boxplot.png)
+![Box Plot](screenshots/BoxPlot.png)
 
 ## Average Energy Usage by Hour
-![Average Energy Usage](screenshots/avg_energy_usage.png)
+![Average Energy Usage](screenshots/Avg_energy_usage.png)
+
+## Average Energy Consumption by Load Type
+![Energy Consumption by Load Type](screenshots/energy_cons_loadtype.png)
 
 ## Evaluation Metrics for All Models
-![Evaluation Metrics](screenshots/evaluation_metrics.png)
+![Evaluation Metrics](screenshots/evaluation_metric.png)
 
 ## RMSE Comparison
-![RMSE Comparison](screenshots/rmse_comparison.png)
+![RMSE Comparison](screenshots/Test_RMSE.png)
 
 ## Cross Validation Results
 ![Cross Validation Results](screenshots/crossval_results.png)
