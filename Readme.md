@@ -13,136 +13,164 @@ The final engineered dataset is used to train and evaluate multiple regression m
 
 ---
 
-# 📂 Repository Structure
+## 📂 Repository Structure
 
 ```
 ├── data/
-│   ├── Steel Industry Energy.csv
+│   ├── Steel_Industry_Energy.xlsx
 │   └── engineered_energy_dataset.csv
 │
 ├── week2_eda.ipynb
-│── week2_baseline_models.ipynb
-│   
+├── week2_baseline_models.ipynb
 │
-├── images/
+├── screenshots/
 │   ├── dataset_overview.png
 │   ├── correlation_heatmap.png
 │   ├── boxplot.png
+│   ├── avg_energy_usage.png
+│   ├── evaluation_metrics.png
 │   ├── rmse_comparison.png
-│   └── predicted_vs_actual.png 
-│   └── evaluation_metric_models.png
+│   ├── crossval_results.png
+│   └── predicted_vs_actual.png
 │
 ├── requirements.txt
-├── README.md
+└── README.md
 ```
 
 ---
 
-# 📊 Dataset Information
+## 📊 Dataset Information
 
 **Dataset:** Steel Industry Energy Consumption
+**Source:** [UCI Machine Learning Repository](https://archive.ics.uci.edu/static/public/851/steel+industry+energy+consumption.zip)
+**Size:** 35,040 rows × 11 original columns 
 
-The dataset contains electricity consumption records collected from an industrial manufacturing process.
+The dataset contains electricity consumption records collected from an industrial steel manufacturing process.
 
 ### Original Features
 
-- date
-- Usage_kWh *(Target Variable)*
-- Lagging_Current_Reactive.Power_kVarh
-- Leading_Current_Reactive_Power_kVarh
-- CO2(tCO2)
-- Lagging_Current_Power_Factor
-- Leading_Current_Power_Factor
-- NSM
-- WeekStatus
-- Day_of_week
-- Load_Type
+| Column | Description |
+|---|---|
+| `date` | Timestamp of the reading (15-min intervals) |
+| `Usage_kWh` | Energy consumption **(Target Variable)** |
+| `Lagging_Current_Reactive.Power_kVarh` | Lagging reactive power |
+| `Leading_Current_Reactive_Power_kVarh` | Leading reactive power |
+| `CO2(tCO2)` | CO2 emissions |
+| `Lagging_Current_Power_Factor` | Lagging power factor |
+| `Leading_Current_Power_Factor` | Leading power factor |
+| `NSM` | Number of seconds from midnight |
+| `WeekStatus` | Weekday / Weekend |
+| `Day_of_week` | Day name |
+| `Load_Type` | Light / Medium / Maximum Load |
 
 ---
 
-# 📥 Dataset Download
+## 📥 Dataset Download
 
-The dataset is available through the following Google Drive link:
+The dataset is available through the following link:
 
-**Google Drive:**  
-*https://docs.google.com/spreadsheets/d/1NyC750ZBipJyxifVBqoJJso8MJFEWf0X/edit?usp=drive_link&ouid=101548115907938380372&rtpof=true&sd=true*
+**Google Drive:** *https://docs.google.com/spreadsheets/d/1NyC750ZBipJyxifVBqoJJso8MJFEWf0X/edit?usp=drive_link*
 
 After downloading:
 
-1. Create a folder named **data** inside the project directory.
-2. Place the downloaded dataset inside the **data/** folder.
-3. Run the notebooks.
+1. Create a folder named `data/` inside the project directory.
+2. Place the downloaded dataset inside the `data/` folder.
+3. Run the notebooks in order: `week2_eda.ipynb` first, then `week2_baseline_models.ipynb`.
 
 ---
 
-# ⚙️ Environment Setup
+## ⚙️ Environment Setup
 
-## Clone the repository
-
+**Clone the repository**
 ```bash
 git clone https://github.com/Kashaf537/Steel-Industry-Energy-Consumption.git
 ```
 
-## Navigate into the project
-
+**Navigate into the project**
 ```bash
 cd Steel-Industry-Energy-Consumption
 ```
 
-## Install dependencies
-
+**Install dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-## Launch Jupyter Notebook
-
+**Launch Jupyter Notebook**
 ```bash
 jupyter notebook
 ```
 
 ---
 
-# 🛠️ Feature Engineering
+## 🛠️ Feature Engineering
 
-The following features were engineered from the original dataset:
+### Critical Fix: Date Column Format Bug
 
-- Hour (Extracted from Date)
-- Month
-- Day_of_Week
-- Week_Status
-- PowerFactorRatio
-- HighLoad (Binary feature based on the 75th percentile of Usage_kWh)
+Before any feature engineering could be trusted, a significant data quality issue 
+was uncovered in the `date` column. About a third of the rows (11,520 out of 
+35,040) had been stored by Excel as native datetime values with the **day and 
+month accidentally swapped**, whenever the day was ambiguous (≤ 12 — a number 
+that could also pass as a month). The remaining rows were stored correctly as 
+plain text.
 
-The original **date** column and target leakage features were removed before model training.
+This was detected by comparing a derived day-of-week/weekend status against the 
+dataset's existing `Day_of_week` and `WeekStatus` columns, which revealed 
+thousands of mismatches. The root cause was traced, the `date` column was 
+corrected, and the fix was verified — resulting in **zero mismatches** across 
+all 35,040 rows. This step was essential, since every time-based feature below 
+depends on `date` being accurate.
+
+### Engineered Features
+
+| Feature | Description |
+|---|---|
+| `Hour` | Hour of day, extracted from the corrected `date` column |
+| `Month` | Month, extracted from the corrected `date` column |
+| `Day_of_week` / `WeekStatus` | Validated against the dataset's original columns (see above); duplicates dropped, originals retained |
+| `PowerFactorRatio` | `Leading_Current_Power_Factor` ÷ `Lagging_Current_Power_Factor` |
+| `HighLoad` | Binary feature — 1 if `Usage_kWh` is above the 75th percentile, else 0 |
+
+The original `date` column and target-leakage features (`HighLoad`, `CO2(tCO2)`) 
+were removed before model training (see *Data Preprocessing* below).
 
 ---
 
-# 📈 Exploratory Data Analysis (EDA)
+## 📈 Exploratory Data Analysis (EDA)
 
 The following analyses were performed:
 
-- Dataset overview
-- Missing value analysis
-- Duplicate record detection
+- Dataset structure overview
+- Date column data quality audit (see fix above)
+- Missing value and duplicate record checks
 - Summary statistics
-- Correlation analysis
-- Feature correlation with Usage_kWh
-- Monthly energy consumption trend
-- Outlier detection using box plots
-- Data quality assessment
+- Outlier detection in `Usage_kWh` using the IQR method, visualized with a boxplot
+- Correlation heatmap of all numerical features
+- Average energy consumption by `Load_Type` (grouped bar chart)
+- Average energy usage by hour of day (line chart)
 
 ### Key Findings
 
-- No missing values were found.
-- No duplicate records were present.
-- Several high-value outliers were detected in energy consumption.
-- CO2 emissions showed an extremely strong positive correlation with energy usage.
-- Reactive power also exhibited a strong relationship with electricity consumption.
+- **No missing values or duplicate records** were found in the raw data.
+- **A hidden date-parsing bug** affected 33% of rows and would have silently 
+  corrupted all time-based features if left unfixed (see above).
+- **328 outliers** were detected in `Usage_kWh` using the IQR method — retained, 
+  as they likely reflect genuine peak production periods rather than data errors.
+- **Top correlated features with `Usage_kWh`:** `CO2(tCO2)` (0.988), 
+  `Lagging_Current_Reactive.Power_kVarh` (0.896), and `Lagging_Current_Power_Factor` 
+  (0.386).
+- **`CO2(tCO2)`'s near-perfect correlation (0.988)** strongly suggests it is a 
+  scaled derivative of `Usage_kWh` rather than an independently measured feature 
+  — a leakage risk that was addressed during model preprocessing.
+- **Energy usage varies clearly by `Load_Type` and hour of day:** Maximum Load 
+  periods consume substantially more energy than Medium or Light Load, and usage 
+  peaks sharply during standard operating hours before dropping overnight — 
+  suggesting energy spikes are primarily driven by production scheduling and 
+  machinery running at full capacity.
 
 ---
 
-# 🤖 Baseline Regression Modeling
+## 🤖 Baseline Regression Modeling
 
 Four regression models were trained:
 
@@ -153,86 +181,108 @@ Four regression models were trained:
 
 ### Data Preprocessing
 
-- Removed target leakage features.
-- Applied One-Hot Encoding to categorical variables.
-- Performed an 80/20 Train-Test Split.
-- Used `random_state=42` for reproducibility.
+- Dropped the `date` column and target-leakage features: `HighLoad` (directly 
+  derived from `Usage_kWh`) and `CO2(tCO2)` (near-perfect correlation with the 
+  target, indicating it's likely a scaled derivative rather than an independent 
+  signal).
+- Applied **one-hot encoding** to categorical variables (`Load_Type`, 
+  `Day_of_week`, `WeekStatus`, `Month`), chosen over label encoding since these 
+  are nominal categories with no inherent order.
+- Handled missing/infinite values in `PowerFactorRatio` (caused by division by 
+  zero) using median imputation.
+- Performed an 80/20 train-test split with `random_state=42` for reproducibility.
 
 ---
 
-# 📏 Evaluation Metrics
+## 📏 Evaluation Metrics
 
-Each model was evaluated using:
+Each model was evaluated on the test set using:
 
 - Mean Absolute Error (MAE)
 - Root Mean Squared Error (RMSE)
 - R² Score
 
-Additionally,
-
-- 5-Fold Cross Validation
-- Mean Cross Validation RMSE
-
-were performed to assess model generalization.
+Additionally, **5-fold cross-validation** was performed for each model, reporting 
+the mean cross-validation RMSE to assess consistency and generalization beyond a 
+single train/test split.
 
 ---
 
-# 📊 Results
+## 📊 Results
+
+| Model | Test MAE | Test RMSE | Test R² | CV RMSE (mean) |
+|---|---|---|---|---|
+| Linear Regression | *fill in* | *fill in* | *fill in* | *fill in* |
+| Ridge Regression | *fill in* | *fill in* | *fill in* | *fill in* |
+| Decision Tree | *fill in* | *fill in* | *fill in* | *fill in* |
+| Random Forest | *fill in* | *fill in* | *fill in* | *fill in* |
 
 The notebook includes:
 
-- RMSE comparison bar chart
-- Predicted vs Actual scatter plot
-- Cross-validation results
-- Model comparison
+- RMSE comparison bar chart across all 4 models
+- Predicted vs Actual scatter plot for the best-performing model
+- Cross-validation results table
+- A written Model Selection section explaining the best model, signs of 
+  overfitting, and which model is carried forward as the baseline
 
-The best-performing model was selected based on the lowest RMSE and highest R² score.
-
----
-
-# 📷 Screenshots
-
-Add screenshots of important outputs here.
-
-Suggested screenshots:
-
-- Dataset Overview
-screenshots\DatasetOverview.png
-- Correlation Heatmap
-screenshots\corr.png
-- Box Plot
-screenshots\BoxPlot.png
-- RMSE Comparison
-screenshots\Test RMSE.png
-- Predicted vs Actual Plot
-screenshots\predicted_vs_actual.png
-Cross Validation results
-screenshots\crossval_results.png
-Average Energy Usage
-screenshots\Avg_energy_usage.png
-Evaluation Metrics for all models
-screenshots\evaluation_metric.png
-```
+The best-performing model was selected based on the lowest test RMSE and highest 
+R² score, with cross-validation results used to confirm generalization and rule 
+out overfitting.
 
 ---
 
-# 📌 Conclusions
+## 📷 Screenshots
 
-This project demonstrates the complete workflow of a machine learning regression problem, including:
+## Dataset Overview
+![Dataset Overview](screenshots/dataset_overview.png)
 
-- Data understanding
-- Data preprocessing
+## Correlation Heatmap
+![Correlation Heatmap](screenshots/correlation_heatmap.png)
+
+## Box Plot — Outlier Detection
+![Box Plot](screenshots/boxplot.png)
+
+## Average Energy Usage by Hour
+![Average Energy Usage](screenshots/avg_energy_usage.png)
+
+## Evaluation Metrics for All Models
+![Evaluation Metrics](screenshots/evaluation_metrics.png)
+
+## RMSE Comparison
+![RMSE Comparison](screenshots/rmse_comparison.png)
+
+## Cross Validation Results
+![Cross Validation Results](screenshots/crossval_results.png)
+
+## Predicted vs Actual Plot
+![Predicted vs Actual Plot](screenshots/predicted_vs_actual.png)
+
+
+---
+
+## 📌 Conclusions
+
+This project demonstrates the complete workflow of a machine learning regression 
+problem, including:
+
+- Data understanding and data quality auditing
+- Data preprocessing and leakage prevention
 - Feature engineering
 - Exploratory data analysis
 - Baseline regression modeling
 - Model evaluation
 - Model selection
 
-The project establishes a strong baseline for future work involving hyperparameter tuning, feature selection, and advanced machine learning techniques.
+Beyond the modeling pipeline itself, this project highlighted the importance of 
+validating raw data before trusting it — the date-parsing bug found in Part 1 
+would have silently corrupted a third of all time-based features and downstream 
+model inputs if it hadn't been caught early. The project establishes a strong, 
+well-validated baseline for future work involving hyperparameter tuning, feature 
+selection, and more advanced machine learning techniques.
 
 ---
 
-# 🧰 Technologies Used
+## 🧰 Technologies Used
 
 - Python
 - Pandas
@@ -244,7 +294,7 @@ The project establishes a strong baseline for future work involving hyperparamet
 
 ---
 
-# 📄 Requirements
+## 📄 Requirements
 
 Install all required packages using:
 
@@ -254,18 +304,15 @@ pip install -r requirements.txt
 
 ---
 
-# 👨‍💻 Author
+## 👨‍💻 Author
 
 **Kashaf Fayyaz**
-
-BS Artificial Intelligence  
-COMSATS University Islamabad
-
 GitHub: https://github.com/Kashaf537
-
 
 ---
 
-# ⭐ Acknowledgement
+## ⭐ Acknowledgement
 
-This project was completed as part of the **ITSimplera AI/ML Internship**, focusing on practical applications of Exploratory Data Analysis, Feature Engineering, and Machine Learning Regression.
+This project was completed as part of the **ITSimplera AI/ML Internship**, 
+focusing on practical applications of Exploratory Data Analysis, Feature 
+Engineering, and Machine Learning Regression.
